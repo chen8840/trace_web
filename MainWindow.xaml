@@ -6,8 +6,10 @@
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
         Title="TraceWeb - 专属的痕迹档案浏览器"
+        Icon="Assets/app.ico"
         Height="750"
         Width="1200"
+        WindowState="Maximized"
         WindowStartupLocation="CenterScreen">
     <Grid>
         <Grid x:Name="HomeView" Background="#F8F9FA" Panel.ZIndex="2">
@@ -151,6 +153,26 @@
                                 Width="90"
                                 Click="ToggleHistoryButton_Click"
                                 Margin="0,0,8,0"
+                                Background="#6C757D"
+                                Foreground="White"
+                                BorderThickness="0" />
+                        <Button x:Name="BackButton"
+                                Content="后退"
+                                DockPanel.Dock="Left"
+                                Width="60"
+                                Click="BackButton_Click"
+                                Margin="0,0,8,0"
+                                IsEnabled="False"
+                                Background="#6C757D"
+                                Foreground="White"
+                                BorderThickness="0" />
+                        <Button x:Name="ForwardButton"
+                                Content="前进"
+                                DockPanel.Dock="Left"
+                                Width="60"
+                                Click="ForwardButton_Click"
+                                Margin="0,0,12,0"
+                                IsEnabled="False"
                                 Background="#6C757D"
                                 Foreground="White"
                                 BorderThickness="0" />

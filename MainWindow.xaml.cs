@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -27,6 +28,7 @@ public partial class MainWindow : Window
     };
     private readonly SQLiteConnection _db;
     private readonly string _dbPath = Path.Combine(Environment.CurrentDirectory, "traceweb_archive.db");
+    private readonly string _uiStatePath = Path.Combine(Environment.CurrentDirectory, "traceweb_ui_state.json");
     private readonly Dictionary<WebView2, TabItem> _tabsByWebView = new();
     private readonly Dictionary<TabItem, TextBlock> _tabHeaders = new();
     private readonly Dictionary<WebView2, Task> _webViewInitTasks = new();
@@ -41,6 +43,8 @@ public partial class MainWindow : Window
         _webViewEnvironmentTask = CoreWebView2Environment.CreateAsync();
         _db = new SQLiteConnection(_dbPath);
         InitDatabase();
+        LoadUiState();
+        ApplyHistoryPanelState();
         LoadHomeView();
         EnsureActiveWebView();
     }
@@ -163,6 +167,7 @@ public partial class MainWindow : Window
         if (isActiveTab)
         {
             UrlTextBox.Text = currentUrl;
+            UpdateNavigationButtonsState();
         }
 
         if (isActiveTab && !string.Equals(currentDomain, _currentActiveDomain, StringComparison.OrdinalIgnoreCase))
@@ -396,11 +401,13 @@ public partial class MainWindow : Window
         var currentWebView = GetCurrentWebView();
         if (currentWebView is null)
         {
+            UpdateNavigationButtonsState();
             return;
         }
 
         var currentUrl = currentWebView.Source?.ToString();
         UrlTextBox.Text = currentUrl ?? string.Empty;
+        UpdateNavigationButtonsState();
 
         if (string.IsNullOrWhiteSpace(currentUrl))
         {
@@ -492,6 +499,32 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void BackButton_Click(object sender, RoutedEventArgs e)
+    {
+        var currentWebView = GetCurrentWebView();
+        if (currentWebView?.CoreWebView2 is null || !currentWebView.CoreWebView2.CanGoBack)
+        {
+            UpdateNavigationButtonsState();
+            return;
+        }
+
+        currentWebView.CoreWebView2.GoBack();
+        UpdateNavigationButtonsState();
+    }
+
+    private void ForwardButton_Click(object sender, RoutedEventArgs e)
+    {
+        var currentWebView = GetCurrentWebView();
+        if (currentWebView?.CoreWebView2 is null || !currentWebView.CoreWebView2.CanGoForward)
+        {
+            UpdateNavigationButtonsState();
+            return;
+        }
+
+        currentWebView.CoreWebView2.GoForward();
+        UpdateNavigationButtonsState();
+    }
+
     private void DomainDeleteButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button button || button.Tag is not string domain || string.IsNullOrWhiteSpace(domain))
@@ -555,8 +588,64 @@ public partial class MainWindow : Window
     private void ToggleHistoryButton_Click(object sender, RoutedEventArgs e)
     {
         _isHistoryCollapsed = !_isHistoryCollapsed;
+        ApplyHistoryPanelState();
+        SaveUiState();
+    }
+
+    private void UpdateNavigationButtonsState()
+    {
+        var currentWebView = GetCurrentWebView();
+        BackButton.IsEnabled = currentWebView?.CoreWebView2?.CanGoBack == true;
+        ForwardButton.IsEnabled = currentWebView?.CoreWebView2?.CanGoForward == true;
+    }
+
+    private void ApplyHistoryPanelState()
+    {
         HistoryColumn.Width = _isHistoryCollapsed ? new GridLength(0) : new GridLength(280);
         ToggleHistoryButton.Content = _isHistoryCollapsed ? "展开历史" : "折叠历史";
+    }
+
+    private void LoadUiState()
+    {
+        try
+        {
+            if (!File.Exists(_uiStatePath))
+            {
+                return;
+            }
+
+            var json = File.ReadAllText(_uiStatePath);
+            var state = JsonSerializer.Deserialize<UiState>(json);
+            if (state is not null)
+            {
+                _isHistoryCollapsed = state.IsHistoryCollapsed;
+            }
+        }
+        catch
+        {
+            _isHistoryCollapsed = false;
+        }
+    }
+
+    private void SaveUiState()
+    {
+        try
+        {
+            var state = new UiState
+            {
+                IsHistoryCollapsed = _isHistoryCollapsed
+            };
+
+            var json = JsonSerializer.Serialize(state, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            File.WriteAllText(_uiStatePath, json);
+        }
+        catch
+        {
+        }
     }
 
     private void PruneAllDomainHistories()
@@ -609,5 +698,10 @@ public partial class MainWindow : Window
         {
             _db.Delete<HistoryRecord>(record.Id);
         }
+    }
+
+    private sealed class UiState
+    {
+        public bool IsHistoryCollapsed { get; set; }
     }
 }

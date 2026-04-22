@@ -1,0 +1,179 @@
+<Window x:Class="TraceWeb.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        mc:Ignorable="d"
+        Title="TraceWeb - 专属的痕迹档案浏览器"
+        Height="750"
+        Width="1200"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid x:Name="HomeView" Background="#F8F9FA" Panel.ZIndex="2">
+            <StackPanel Margin="40">
+                <TextBlock Text="我的网站归档"
+                           FontSize="28"
+                           FontWeight="Bold"
+                           Foreground="#2C3E50"
+                           Margin="0,0,0,20" />
+                <Border Background="White"
+                        BorderBrush="#DEE2E6"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="10"
+                        Margin="8,0,8,12">
+                    <DockPanel>
+                        <Button Content="开始浏览"
+                                DockPanel.Dock="Right"
+                                Width="90"
+                                Click="HomeGoButton_Click"
+                                Margin="8,0,0,0"
+                                Background="#0078D7"
+                                Foreground="White"
+                                BorderThickness="0" />
+                        <TextBox x:Name="HomeUrlTextBox"
+                                 VerticalContentAlignment="Center"
+                                 FontSize="14"
+                                 Padding="8,4"
+                                 KeyDown="HomeUrlTextBox_KeyDown"
+                                 Text="https://www.bing.com" />
+                    </DockPanel>
+                </Border>
+
+                <ListView x:Name="DomainListView"
+                          SelectionChanged="DomainListView_SelectionChanged"
+                          BorderThickness="0"
+                          Background="Transparent"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="White"
+                                    CornerRadius="8"
+                                    Padding="15"
+                                    Margin="8"
+                                    Width="280"
+                                    BorderBrush="#E9ECEF"
+                                    BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding RootDomain}"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               Foreground="#0078D7" />
+                                    <TextBlock Text="{Binding LastVisit, StringFormat='最后访问: {0:yyyy-MM-dd HH:mm}'}"
+                                               FontSize="12"
+                                               Foreground="Gray"
+                                               Margin="0,8,0,0" />
+                                    <TextBlock Text="{Binding VisitCount, StringFormat='共 {0} 条足迹'}"
+                                               FontSize="12"
+                                               Foreground="#6C757D" />
+                                    <Button Content="删除"
+                                            Tag="{Binding RootDomain}"
+                                            Click="DomainDeleteButton_Click"
+                                            Margin="0,10,0,0"
+                                            HorizontalAlignment="Left"
+                                            Padding="10,4"
+                                            Background="#DC3545"
+                                            Foreground="White"
+                                            BorderThickness="0" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+                </ListView>
+            </StackPanel>
+        </Grid>
+
+        <Grid x:Name="BrowserView" Visibility="Hidden" Panel.ZIndex="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="HistoryColumn" Width="280" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <DockPanel Grid.Column="0" Background="#F8F9FA">
+                <StackPanel DockPanel.Dock="Top" Background="#E9ECEF" Margin="0,0,0,6">
+                    <Button Content="← 返回归档室"
+                            Click="BackToHome_Click"
+                            Padding="8,5"
+                            Margin="15,15,15,15"
+                            HorizontalAlignment="Left"
+                            Background="White"
+                            BorderBrush="#CED4DA" />
+                    <TextBlock x:Name="CurrentDomainText"
+                               Text="example.com"
+                               FontWeight="Bold"
+                               FontSize="16"
+                               Foreground="#343A40"
+                               Margin="15,0,15,15" />
+                </StackPanel>
+
+                <ListBox x:Name="HistoryListBox"
+                         SelectionChanged="HistoryListBox_SelectionChanged"
+                         BorderThickness="0"
+                         Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="10,8">
+                                <TextBlock Text="{Binding Title}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Foreground="#212529" />
+                                <TextBlock Text="{Binding VisitTime, StringFormat='{}{0:MM-dd HH:mm:ss}'}"
+                                           FontSize="11"
+                                           Foreground="#ADB5BD"
+                                           Margin="0,4,0,0" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Background="White"
+                        BorderBrush="#DEE2E6"
+                        BorderThickness="0,0,0,1"
+                        Padding="8">
+                    <DockPanel>
+                        <Button x:Name="ToggleHistoryButton"
+                                Content="折叠历史"
+                                DockPanel.Dock="Left"
+                                Width="90"
+                                Click="ToggleHistoryButton_Click"
+                                Margin="0,0,8,0"
+                                Background="#6C757D"
+                                Foreground="White"
+                                BorderThickness="0" />
+                        <Button Content="前往"
+                                DockPanel.Dock="Right"
+                                Width="70"
+                                Click="GoButton_Click"
+                                Margin="8,0,0,0"
+                                Background="#0078D7"
+                                Foreground="White"
+                                BorderThickness="0" />
+                        <TextBox x:Name="UrlTextBox"
+                                 VerticalContentAlignment="Center"
+                                 FontSize="14"
+                                 Padding="5,0"
+                                 KeyDown="UrlTextBox_KeyDown" />
+                    </DockPanel>
+                </Border>
+
+                <TabControl x:Name="BrowserTabs"
+                            Grid.Row="1"
+                            SelectionChanged="BrowserTabs_SelectionChanged" />
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

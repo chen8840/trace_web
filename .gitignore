@@ -1,0 +1,25 @@
+# Build outputs
+bin/
+obj/
+publish/
+
+# User-specific files
+*.user
+*.suo
+*.userprefs
+
+# IDE folders
+.vs/
+.vscode/
+
+# Logs
+*.log
+
+# Local database/cache
+traceweb_archive.db
+*.db-shm
+*.db-wal
+
+# OS files
+.DS_Store
+Thumbs.db

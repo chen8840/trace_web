@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private string _currentActiveDomain = string.Empty;
     private bool _ignoreHistorySelection;
     private bool _isHistoryCollapsed;
+    private string? _lastUrl;
 
     public MainWindow()
     {
@@ -45,8 +46,25 @@ public partial class MainWindow : Window
         InitDatabase();
         LoadUiState();
         ApplyHistoryPanelState();
-        LoadHomeView();
-        EnsureActiveWebView();
+        if (!string.IsNullOrWhiteSpace(_lastUrl))
+        {
+            OpenInBrowser(_lastUrl);
+        }
+        else
+        {
+            LoadHomeView();
+            EnsureActiveWebView();
+        }
+
+        Closing += (s, e) =>
+        {
+            var webView = GetCurrentWebView();
+            if (webView?.Source is not null)
+            {
+                _lastUrl = webView.Source.ToString();
+                SaveUiState();
+            }
+        };
     }
 
     private void InitDatabase()
@@ -168,6 +186,8 @@ public partial class MainWindow : Window
         {
             UrlTextBox.Text = currentUrl;
             UpdateNavigationButtonsState();
+            _lastUrl = currentUrl;
+            SaveUiState();
         }
 
         if (isActiveTab && !string.Equals(currentDomain, _currentActiveDomain, StringComparison.OrdinalIgnoreCase))
@@ -619,6 +639,7 @@ public partial class MainWindow : Window
             if (state is not null)
             {
                 _isHistoryCollapsed = state.IsHistoryCollapsed;
+                _lastUrl = state.LastUrl;
             }
         }
         catch
@@ -633,7 +654,8 @@ public partial class MainWindow : Window
         {
             var state = new UiState
             {
-                IsHistoryCollapsed = _isHistoryCollapsed
+                IsHistoryCollapsed = _isHistoryCollapsed,
+                LastUrl = _lastUrl
             };
 
             var json = JsonSerializer.Serialize(state, new JsonSerializerOptions
@@ -703,5 +725,6 @@ public partial class MainWindow : Window
     private sealed class UiState
     {
         public bool IsHistoryCollapsed { get; set; }
+        public string? LastUrl { get; set; }
     }
 }

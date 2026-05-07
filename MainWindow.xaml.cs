@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -32,6 +33,7 @@ public partial class MainWindow : Window
     private readonly Dictionary<WebView2, TabItem> _tabsByWebView = new();
     private readonly Dictionary<TabItem, TextBlock> _tabHeaders = new();
     private readonly Dictionary<WebView2, Task> _webViewInitTasks = new();
+    private readonly Dictionary<WebView2, double> _scrollTopByWebView = new();
     private readonly Task<CoreWebView2Environment> _webViewEnvironmentTask;
     private string _currentActiveDomain = string.Empty;
     private bool _ignoreHistorySelection;
@@ -416,8 +418,13 @@ public partial class MainWindow : Window
         return (BrowserTabs.SelectedItem as TabItem)?.Tag as WebView2;
     }
 
-    private void BrowserTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void BrowserTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (e.RemovedItems.OfType<TabItem>().FirstOrDefault()?.Tag is WebView2 previousWebView)
+        {
+            await CaptureScrollPositionAsync(previousWebView);
+        }
+
         var currentWebView = GetCurrentWebView();
         if (currentWebView is null)
         {
@@ -437,6 +444,44 @@ public partial class MainWindow : Window
         _currentActiveDomain = ExtractRootDomain(currentUrl);
         CurrentDomainText.Text = $"正在浏览: {_currentActiveDomain}";
         LoadDomainHistory();
+        await RestoreScrollPositionAsync(currentWebView);
+    }
+
+    private async Task CaptureScrollPositionAsync(WebView2 webView)
+    {
+        if (webView.CoreWebView2 is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var result = await webView.ExecuteScriptAsync("window.scrollY");
+            if (double.TryParse(result, NumberStyles.Float, CultureInfo.InvariantCulture, out var scrollTop))
+            {
+                _scrollTopByWebView[webView] = scrollTop;
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task RestoreScrollPositionAsync(WebView2 webView)
+    {
+        if (webView.CoreWebView2 is null || !_scrollTopByWebView.TryGetValue(webView, out var scrollTop))
+        {
+            return;
+        }
+
+        try
+        {
+            var script = $"window.scrollTo(0, {scrollTop.ToString(CultureInfo.InvariantCulture)});";
+            await webView.ExecuteScriptAsync(script);
+        }
+        catch
+        {
+        }
     }
 
     private object BuildTabHeader(TabItem ownerTab, string title)
@@ -498,6 +543,7 @@ public partial class MainWindow : Window
 
             _tabsByWebView.Remove(webView);
             _webViewInitTasks.Remove(webView);
+            _scrollTopByWebView.Remove(webView);
         }
 
         _tabHeaders.Remove(tabToClose);
